@@ -8,6 +8,12 @@ export default function Retinopathy() {
   const [error, setError] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
 
+  const handleRetry = () => {
+    setError(null)
+    setResult(null)
+    setLoading(false)
+  }
+
   const handleFileSubmit = async (e) => {
     e.preventDefault()
     if (!selectedFile) return
@@ -25,6 +31,10 @@ export default function Retinopathy() {
         body: formData,
       })
 
+      if (!response.ok) {
+        throw new Error('Failed to analyze image. Please check the file and try again.')
+      }
+
       const data = await response.json()
       if (data.error) {
         throw new Error(data.error)
@@ -32,7 +42,7 @@ export default function Retinopathy() {
       setResult(data)
       setPreviewUrl(URL.createObjectURL(selectedFile))
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -41,8 +51,13 @@ export default function Retinopathy() {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size exceeds 5MB limit. Please choose a smaller file.')
+        return
+      }
       setSelectedFile(file)
       setPreviewUrl(URL.createObjectURL(file))
+      setError(null)
     }
   }
 
@@ -148,8 +163,33 @@ export default function Retinopathy() {
           <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
           
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{error}</p>
+                    <p className="mt-1">Please make sure:</p>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>The image is clear and well-lit</li>
+                      <li>The image shows the retina clearly</li>
+                      <li>The file size is under 5MB</li>
+                      <li>The file format is PNG or JPG</li>
+                    </ul>
+                  </div>
+                  <button
+                    onClick={handleRetry}
+                    className="mt-3 text-sm font-medium text-red-600 hover:text-red-500"
+                  >
+                    Try Again →
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
